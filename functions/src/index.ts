@@ -5,6 +5,7 @@ import {onDocumentUpdated, QueryDocumentSnapshot} from "firebase-functions/v2/fi
 import {firestore} from "firebase-admin";
 import DocumentData = firestore.DocumentData;
 import WriteResult = firestore.WriteResult;
+import QuerySnapshot = firestore.QuerySnapshot;
 
 admin.initializeApp();
 
@@ -13,10 +14,10 @@ exports.crearAvisos = onSchedule("0 6 * * *", async () => {
     const tramitesSnapshot = await tramitesQuery.get();
 
     tramitesSnapshot.forEach( (doc:QueryDocumentSnapshot) => {
-        const fechaActual = new Date();
-        const fechaDada = new Date(doc.data().fechaFinTramite);
+        const fechaActual: Date = new Date();
+        const fechaDada: Date = new Date(doc.data().fechaFinTramite);
         const diferenciaEnMilisegundos = fechaDada.getTime() - fechaActual.getTime();
-        const diasRestantes = Math.ceil(diferenciaEnMilisegundos / (1000 * 60 * 60 * 24)); // Round up to handle partial days
+        const diasRestantes: Number = Math.ceil(diferenciaEnMilisegundos / (1000 * 60 * 60 * 24)); // Round up to handle partial days
 
         if (diasRestantes <= 9 && diasRestantes >= 0) {
             try {
@@ -59,7 +60,9 @@ exports.eliminarAvisosEntregados = onSchedule("0 5 * * *", async () => {
     const avisosSnapshot = await avisosQuery.get();
     avisosSnapshot.forEach((doc) => {
         if (tramites.includes(doc.data().codigo)) {
-            doc.ref.delete().then( (r:WriteResult) => logger.log("Aviso eliminado "+r)).catch(() => logger.error("Error al eliminar el aviso"));
+            doc.ref.delete()
+                .then( (r:WriteResult) => logger.log("Aviso eliminado "+r))
+                .catch(() => logger.error("Error al eliminar el aviso"));
         }
     });
 });
@@ -69,11 +72,11 @@ exports.eliminarAvisosDeTramitesEntregados = onDocumentUpdated('tramites/{tramit
     const oldData: DocumentData = event.data!.before.data();
     if (newData.estado === "Entregado" && oldData.estado !== "Entregado") {
         const tramiteCodigo = newData.codigo;
-        await admin.firestore().collection("avisos")
-            .where("codigo", "==", tramiteCodigo).get().then( (querySnapshot) => {
-                    querySnapshot.forEach((doc) => doc.ref.delete().then(_ => {
-                        logger.log("Aviso eliminado")
-                    }).catch(() => logger.error("Error al eliminar el aviso")));
+        await admin.firestore().collection("avisos").where("codigo", "==", tramiteCodigo).get()
+            .then( (querySnapshot: QuerySnapshot<firestore.DocumentData>) => {
+                querySnapshot.forEach((doc: QueryDocumentSnapshot) => doc.ref.delete()
+                .then(_ => {logger.log("Aviso eliminado")})
+                .catch(() => logger.error("Error al eliminar el aviso")));
             });
 
     }
